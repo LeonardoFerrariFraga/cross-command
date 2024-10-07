@@ -18,8 +18,8 @@ MonoBehaviour:
     <min>k__BackingField: -0.05
     <max>k__BackingField: 0.05
   <EulerVariation>k__BackingField:
-    <min>k__BackingField: -1
-    <max>k__BackingField: 1
+    <min>k__BackingField: -3
+    <max>k__BackingField: 3
   <Color>k__BackingField: {r: 0.20803669, g: 0.8018868, b: 0.5323655, a: 1}
   <ColorVariation>k__BackingField:
     <min>k__BackingField: -0.05

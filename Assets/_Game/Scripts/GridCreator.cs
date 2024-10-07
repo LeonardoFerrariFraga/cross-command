@@ -2,16 +2,8 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
-/// <summary>
-/// Editor tool used to create a grass grid in edit mode.
-/// </summary>
 public class GridCreator : MonoBehaviour
 {
-#if UNITY_EDITOR
     [SerializeField] GameObject _grassPrefab;
     [SerializeField, InlineEditor] GridData _data;
     [Space(15)]
@@ -25,7 +17,7 @@ public class GridCreator : MonoBehaviour
         
         for (int row = 0; row < _data.Size.x; row++) {
             for (int col = 0; col < _data.Size.y; col++) {
-                _instantiatedPrefabs.Add(InstantiateGrass(row, col));
+                _instantiatedPrefabs.Add(InstantiateGrass(row, col, _data));
             }    
         }
     }
@@ -40,27 +32,27 @@ public class GridCreator : MonoBehaviour
         _instantiatedPrefabs = new List<GameObject>(_data.Size.x * _data.Size.y);
     }
     
-    GameObject InstantiateGrass(int row, int col) {
-        Vector3 scale = Vector3.one * _data.Scale;
-        Vector3 position = new (row * scale.x, scale.y, col * scale.z);
-        position.y += _data.HeightVariation.RandomInBetween();
-        Vector3 euler = Vector3.zero.Add(_data.EulerVariation.RandomInBetween());
-        Color color = _data.Color;
-        color.AddVariation(_data.ColorVariation);
+    GameObject InstantiateGrass(int row, int col, GridData data) {
+        Vector3 position = new () {
+            x = row * data.Scale, 
+            y = -(data.Scale / 2f) + data.HeightVariation.RandomInBetween(), 
+            z = col * data.Scale
+        };
+        
+        Vector3 euler = Vector3.zero;
+        Quaternion rotation = Quaternion.Euler(euler.Add(data.EulerVariation.RandomInBetween()));
+        
+        Color color = data.Color;
+        color.Add(data.ColorVariation.RandomInBetween());
 
-        Transform grass = ((GameObject)PrefabUtility.InstantiatePrefab(_grassPrefab)).transform;
-        grass.localScale = scale;
-        grass.position = position;
-        grass.rotation = Quaternion.Euler(euler);
-
-        Renderer render = grass.GetComponent<Renderer>();
-        MaterialPropertyBlock propertyBlock = new();
-        render.GetPropertyBlock(propertyBlock);
-        propertyBlock.SetColor(ColorPropertyID, color);
-        render.SetPropertyBlock(propertyBlock);
-
-        grass.name = $"{grass.name} ({row},{col})";
-        return grass.gameObject;
+        return new CubeBuilder()
+            .WithPrefab(_grassPrefab)
+            .WithName($"{_grassPrefab.name} : ({row},{col})")
+            .WithPosition(position)
+            .WithRotation(rotation)
+            .WithScale(Vector3.one * data.Scale)
+            .WithColor(color, ColorPropertyID)
+            .WithParent(transform)
+            .Build();
     }
-#endif
 }
