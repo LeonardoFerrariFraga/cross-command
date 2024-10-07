@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using JetBrains.Annotations;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -14,8 +15,10 @@ public class CubeBuilder
     string _name = "Cube (Clone)";
     Transform _parent = null;
 
-    public CubeBuilder WithPrefab(GameObject prefab) {
-        _prefab = prefab;
+    public CubeBuilder WithPrefab([CanBeNull] GameObject prefab) {
+        if (prefab)
+            _prefab = prefab;
+        
         return this;
     }
 

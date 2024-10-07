@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(BoxCollider), typeof(MeshFilter), typeof(MeshRenderer))]
 public class GridCreator : MonoBehaviour
 {
-    [SerializeField, Required] GameObject _grassPrefab;
+    [SerializeField] GameObject _cubePrefab;
     
     [Tooltip("The grid is created from left to right (x), bottom to top (z). Default value is Vector3.zero")]
     [SerializeField] Transform _startPositionTransform;
@@ -29,7 +29,7 @@ public class GridCreator : MonoBehaviour
     MeshFilter _meshFilter;
     MeshRenderer _meshRenderer;
 
-    bool _meetRequirements => _grassPrefab && _data;
+    bool _meetRequirements => _data;
 
     const int VERTICES_PER_CUBE = 24; // Cube has 6 faces, each face has 4 vertices, 6 * 4 = 24.
     static readonly int ColorPropertyID = Shader.PropertyToID("_BaseColor");
@@ -47,7 +47,7 @@ public class GridCreator : MonoBehaviour
         _instantiatedPrefabs = new List<GameObject>(_data.TotalSize);
         for (int col = 0; col < _data.Size.y; col++) {
             for (int row = 0; row < _data.Size.x; row++) {
-                _instantiatedPrefabs.Add(InstantiateGrass(row, col));
+                _instantiatedPrefabs.Add(InstantiateCubes(row, col));
             }    
         }
 
@@ -72,6 +72,13 @@ public class GridCreator : MonoBehaviour
         
         _instantiatedPrefabs.Clear();
 
+        if (!_poles) {
+            Transform edgePoles = transform.Find("Edge Poles");
+            if (edgePoles) {
+                _poles = edgePoles.gameObject;
+            }
+        }
+
         if (_poles) {
 #if UNITY_EDITOR
             DestroyImmediate(_poles);
@@ -79,7 +86,7 @@ public class GridCreator : MonoBehaviour
             Destroy(_poles);
 #endif
         }
-        
+
         _boxCollider.center = transform.position;
         _boxCollider.size = Vector3.one;
         
@@ -93,7 +100,7 @@ public class GridCreator : MonoBehaviour
         _meshRenderer.sharedMaterial = null;
     }
     
-    GameObject InstantiateGrass(int row, int col) {
+    GameObject InstantiateCubes(int row, int col) {
         Vector3 position = _startPosition + new Vector3() {
             x = row * _data.Scale, 
             y = -(_data.Scale / 2f) + _data.HeightVariation.RandomInBetween(), 
@@ -102,15 +109,14 @@ public class GridCreator : MonoBehaviour
         
         Vector3 euler = Vector3.zero;
         Quaternion rotation = Quaternion.Euler(euler.Add(_data.EulerVariation.RandomInBetween()));
-
+        
         return new CubeBuilder()
-            .WithPrefab(_grassPrefab)
-            .WithName($"{_grassPrefab.name} : ({row},{col})")
+            .WithPrefab(_cubePrefab)
             .WithPosition(position)
             .WithRotation(rotation)
             .WithScale(Vector3.one * _data.Scale)
             .WithParent(transform)
-            .Build();
+            .Build();    
     }
 
     void CombineMeshes(List<GameObject> cubes) {
@@ -151,11 +157,12 @@ public class GridCreator : MonoBehaviour
         Bounds topLeftBounds = cubes[data.TotalSize - data.Size.x].GetComponent<MeshRenderer>().bounds;
         Bounds topRightBounds = cubes[data.TotalSize - 1].GetComponent<MeshRenderer>().bounds;
 
+        Vector3 position = transform.position;
         Vector3[] positions = {
-            new(botLeftBounds.min.x, startPosition.y, botLeftBounds.min.z),
-            new(botRightBounds.max.x, startPosition.y, botRightBounds.min.z),
-            new(topLeftBounds.min.x, startPosition.y, topLeftBounds.max.z),
-            new(topRightBounds.max.x, startPosition.y, topRightBounds.max.z)
+            position + new Vector3(botLeftBounds.min.x, startPosition.y, botLeftBounds.min.z),
+            position + new Vector3(botRightBounds.max.x, startPosition.y, botRightBounds.min.z),
+            position + new Vector3(topLeftBounds.min.x, startPosition.y, topLeftBounds.max.z),
+            position + new Vector3(topRightBounds.max.x, startPosition.y, topRightBounds.max.z)
         };
         
         string[] names = { "Bot Left Corner", "Bot Right Corner", "Top Left Corner", "Top Right Corner" };
