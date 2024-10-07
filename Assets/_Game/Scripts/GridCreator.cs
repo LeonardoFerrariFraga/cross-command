@@ -1,41 +1,65 @@
+using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.Serialization;
+using UnityEngine.Rendering;
 
+[RequireComponent(typeof(BoxCollider), typeof(MeshFilter), typeof(MeshRenderer))]
 public class GridCreator : MonoBehaviour
 {
-    [SerializeField] GameObject _grassPrefab;
+    [SerializeField, Required] GameObject _grassPrefab;
+    
     [Tooltip("The grid is created from left to right (x), bottom to top (z). Default value is Vector3.zero")]
-    [SerializeField] Transform _startPosition;
+    [SerializeField] Transform _startPositionTransform;
+    Vector3 _startPosition => _startPositionTransform ? _startPositionTransform.position : Vector3.zero;
+    
     [SerializeField] bool _addCornerPoles;
     [SerializeField, ShowIf("_addCornerPoles")] Color _polesColor;
-    [Space(15)]
-    [SerializeField, InlineEditor] GridData _data;
-    [Space(15)]
-    [SerializeField, ReadOnly] List<GameObject> _instantiatedPrefabs;
-    [FormerlySerializedAs("_cornerMarks")] [SerializeField, ReadOnly] List<GameObject> _poles;
     
-    static readonly int ColorPropertyID = Shader.PropertyToID("_BaseColor");
+    [Space(15)]
+    
+    [SerializeField, Required, InlineEditor] GridData _data;
+    
+    [Space(15)]
+    
+    [SerializeField, ReadOnly] List<GameObject> _instantiatedPrefabs;
+    [SerializeField, ReadOnly] GameObject _poles;
 
-    [Button]
+    BoxCollider _boxCollider;
+    MeshFilter _meshFilter;
+    MeshRenderer _meshRenderer;
+
+    bool _meetRequirements => _grassPrefab && _data;
+
+    const int VERTICES_PER_CUBE = 24; // Cube has 6 faces, each face has 4 vertices, 6 * 4 = 24.
+    static readonly int ColorPropertyID = Shader.PropertyToID("_BaseColor");
+    
+    void Reset() {
+        _boxCollider = GetComponent<BoxCollider>();
+        _meshFilter = GetComponent<MeshFilter>();
+        _meshRenderer = GetComponent<MeshRenderer>();
+    }
+    
+    [Button, ShowIf("_meetRequirements")]
     void CreateGrid() {
         DeleteGrid();
         
         _instantiatedPrefabs = new List<GameObject>(_data.TotalSize);
         for (int col = 0; col < _data.Size.y; col++) {
             for (int row = 0; row < _data.Size.x; row++) {
-                _instantiatedPrefabs.Add(InstantiateGrass(row, col, _data));
+                _instantiatedPrefabs.Add(InstantiateGrass(row, col));
             }    
         }
 
-        CreateCollider(_instantiatedPrefabs, _data, _startPosition.position);
+        CreateCollider(_instantiatedPrefabs, _data, _startPosition);
         
         if (_addCornerPoles)
-            AddPoles(_instantiatedPrefabs, _data, _startPosition.position, _polesColor);
+            AddPoles(_instantiatedPrefabs, _data, _startPosition, _polesColor);
+        
+        CombineMeshes(_instantiatedPrefabs);
     }
 
-    [Button]
+    [Button, ShowIf("_meetRequirements")]
     void DeleteGrid() {
         while (_instantiatedPrefabs is { Count: > 0 }) {
 #if UNITY_EDITOR
@@ -48,120 +72,108 @@ public class GridCreator : MonoBehaviour
         
         _instantiatedPrefabs.Clear();
 
-        while (_poles is { Count: > 0 }) {
+        if (_poles) {
 #if UNITY_EDITOR
-            DestroyImmediate(_poles[0]);
+            DestroyImmediate(_poles);
 #else
-            Destroy(_poles[0]);
+            Destroy(_poles);
 #endif
-            _poles.RemoveAt(0);
         }
         
-        _poles.Clear();
-
-        BoxCollider col = GetComponent<BoxCollider>();
-        if (col) {
+        _boxCollider.center = transform.position;
+        _boxCollider.size = Vector3.one;
+        
+        Mesh mesh = _meshFilter.sharedMesh;
 #if UNITY_EDITOR
-            DestroyImmediate(col);
+        DestroyImmediate(mesh);
 #else
-            Destroy(col);
+        Destroy(mesh);
 #endif
-        }
+        
+        _meshRenderer.sharedMaterial = null;
     }
     
-    GameObject InstantiateGrass(int row, int col, GridData data) {
-        Vector3 startPosition = _startPosition ? _startPosition.position : Vector3.zero;
-        Vector3 position = startPosition + new Vector3() {
-            x = row * data.Scale, 
-            y = -(data.Scale / 2f) + data.HeightVariation.RandomInBetween(), 
-            z = col * data.Scale
+    GameObject InstantiateGrass(int row, int col) {
+        Vector3 position = _startPosition + new Vector3() {
+            x = row * _data.Scale, 
+            y = -(_data.Scale / 2f) + _data.HeightVariation.RandomInBetween(), 
+            z = col * _data.Scale
         };
         
         Vector3 euler = Vector3.zero;
-        Quaternion rotation = Quaternion.Euler(euler.Add(data.EulerVariation.RandomInBetween()));
-        
-        Color color = data.Color;
-        color.Add(data.ColorVariation.RandomInBetween());
+        Quaternion rotation = Quaternion.Euler(euler.Add(_data.EulerVariation.RandomInBetween()));
 
         return new CubeBuilder()
             .WithPrefab(_grassPrefab)
             .WithName($"{_grassPrefab.name} : ({row},{col})")
             .WithPosition(position)
             .WithRotation(rotation)
-            .WithScale(Vector3.one * data.Scale)
-            .WithColor(color, ColorPropertyID)
+            .WithScale(Vector3.one * _data.Scale)
             .WithParent(transform)
             .Build();
     }
 
+    void CombineMeshes(List<GameObject> cubes) {
+        CombineInstance[] meshesToCombine = new CombineInstance[cubes.Count];
+        for (int index = 0; index < cubes.Count; index++) {
+            meshesToCombine[index].mesh = cubes[index].GetComponent<MeshFilter>().sharedMesh;
+            meshesToCombine[index].transform = cubes[index].transform.localToWorldMatrix;
+        }
+        
+        _meshFilter.sharedMesh = new Mesh {
+            indexFormat = _data.TotalSize * VERTICES_PER_CUBE > UInt16.MaxValue ? IndexFormat.UInt32 : IndexFormat.UInt16
+        };
+        
+        _meshFilter.sharedMesh.CombineMeshes(meshesToCombine);
+
+        _meshRenderer.sharedMaterial = cubes[0].GetComponent<MeshRenderer>().sharedMaterial;
+        MaterialPropertyBlock matPropertyBlock = new ();
+        matPropertyBlock.SetColor(ColorPropertyID, _data.Color);
+        _meshRenderer.SetPropertyBlock(matPropertyBlock);
+
+        foreach (GameObject cube in cubes) {
+            #if UNITY_EDITOR
+            DestroyImmediate(cube);
+            #else
+            Destroy(cube);
+            #endif
+        }
+    }
+    
     void AddPoles(List<GameObject> cubes, GridData data, Vector3 startPosition, Color color) {
-        _poles = new(4);
-
-        // The naming is considering a topdown view (z is "up")
-        int botLeftIndex = 0;
-        int botRightIndex = data.Size.x - 1;
-        int topLeftIndex = data.TotalSize - data.Size.x;
-        int topRightIndex = data.TotalSize - 1;
+        _poles = new GameObject("Edge Poles");;
+        _poles.transform.SetParent(transform);
+        _poles.transform.SetSiblingIndex(_startPositionTransform ? 1 : 0);
         
-        Bounds blBounds = cubes[botLeftIndex].GetComponent<MeshRenderer>().bounds;
-        Bounds brBounds = cubes[botRightIndex].GetComponent<MeshRenderer>().bounds;
-        Bounds tlBounds = cubes[topLeftIndex].GetComponent<MeshRenderer>().bounds;
-        Bounds trBounds = cubes[topRightIndex].GetComponent<MeshRenderer>().bounds;
+        // Naming is considering a top-down view (z is "up")
+        Bounds botLeftBounds = cubes[0].GetComponent<MeshRenderer>().bounds;
+        Bounds botRightBounds = cubes[data.Size.x - 1].GetComponent<MeshRenderer>().bounds;
+        Bounds topLeftBounds = cubes[data.TotalSize - data.Size.x].GetComponent<MeshRenderer>().bounds;
+        Bounds topRightBounds = cubes[data.TotalSize - 1].GetComponent<MeshRenderer>().bounds;
+
+        Vector3[] positions = {
+            new(botLeftBounds.min.x, startPosition.y, botLeftBounds.min.z),
+            new(botRightBounds.max.x, startPosition.y, botRightBounds.min.z),
+            new(topLeftBounds.min.x, startPosition.y, topLeftBounds.max.z),
+            new(topRightBounds.max.x, startPosition.y, topRightBounds.max.z)
+        };
         
-        Vector3 blCorner = blBounds.min;
-        blCorner.y = startPosition.y;
-        Vector3 brCorner = new (brBounds.max.x, startPosition.y, brBounds.min.z);
-        Vector3 tlCorner = new (tlBounds.min.x, startPosition.y, tlBounds.max.z);
-        Vector3 trCorner = trBounds.max;
-        trCorner.y = startPosition.y;
+        string[] names = { "Bot Left Corner", "Bot Right Corner", "Top Left Corner", "Top Right Corner" };
         
-        _poles.Add(
+        for (int i = 0; i < 4; i++) {
             new CubeBuilder()
-                .WithPosition(blCorner)
-                .WithName("Bot Left Corner")
+                .WithPosition(positions[i])
+                .WithName(names[i])
                 .WithScale(new Vector3(0.1f * data.Scale, data.Scale * 2f, 0.1f * data.Scale))
                 .WithColor(color, ColorPropertyID)
-                .Build()    
-        );
-
-        _poles.Add(
-            new CubeBuilder()
-                .WithPosition(brCorner)
-                .WithName("Bot Right Corner")
-                .WithScale(new Vector3(0.1f * data.Scale, data.Scale * 2f, 0.1f * data.Scale))
-                .WithColor(color, ColorPropertyID)
-                .Build()
-        );
-
-        _poles.Add(
-            new CubeBuilder()
-                .WithPosition(tlCorner)
-                .WithName("Top Left Corner")
-                .WithScale(new Vector3(0.1f * data.Scale, data.Scale * 2f, 0.1f * data.Scale))
-                .WithColor(color, ColorPropertyID)
-                .Build()
-        );
-
-        _poles.Add(
-            new CubeBuilder()
-                .WithPosition(trCorner)
-                .WithName("Bot Right Corner")
-                .WithScale(new Vector3(0.1f * data.Scale, data.Scale * 2f, 0.1f * data.Scale))
-                .WithColor(color, ColorPropertyID)
-                .Build()
-        );
+                .Build().transform.SetParent(_poles.transform);    
+        }
     }
     
     void CreateCollider(List<GameObject> cubes, GridData data, Vector3 startPosition) {
-        
-        
-        BoxCollider col = GetComponent<BoxCollider>();
-        if (!col)
-            col = gameObject.AddComponent<BoxCollider>();
-        
         Vector3 center = Vector3.Lerp(cubes[0].transform.position, cubes[^1].transform.position, 0.5f);
         center.y = startPosition.y - data.Scale / 2f;
-        col.center = center;
-        col.size = new Vector3(data.Size.x * data.Scale, data.Scale, data.Size.y * data.Scale);
+        _boxCollider.center = center;
+        _boxCollider.size = new Vector3(data.Size.x * data.Scale, data.Scale, data.Size.y * data.Scale);
     }
 }
