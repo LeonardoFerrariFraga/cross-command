@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bccb0c3b5e6a4e2eb8caa049c2811c36, type: 3}
+  m_Name: GridData
+  m_EditorClassIdentifier: 
+  <Size>k__BackingField: {x: 10, y: 10}
+  <Scale>k__BackingField: 1
+  <HeightVariation>k__BackingField:
+    <min>k__BackingField: -0.05
+    <max>k__BackingField: 0.05
+  <EulerVariation>k__BackingField:
+    <min>k__BackingField: -1
+    <max>k__BackingField: 1
+  <Color>k__BackingField: {r: 0.20803669, g: 0.8018868, b: 0.5323655, a: 1}
+  <ColorVariation>k__BackingField:
+    <min>k__BackingField: -0.05
+    <max>k__BackingField: 0.05
