@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using UnityEngine;
 
 public abstract class UnitCommand : ICommand
 {
@@ -8,5 +9,9 @@ public abstract class UnitCommand : ICommand
     protected UnitCommand(IUnitEntity entity) => this.entity = entity;
     
     public abstract Task Execute();
-    public abstract Task Undo();
+
+    public virtual Task Undo() {
+        Debug.Log($"{GetType().Name}: Undo() not implemented.");
+        return Task.CompletedTask;
+    }
 }
