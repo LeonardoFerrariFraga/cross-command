@@ -10,11 +10,10 @@ public class CubeBuilder
     Vector3 _position = Vector3.zero;
     Quaternion _rotation = Quaternion.identity;
     Vector3 _scale = Vector3.one;
-    Color _color = Color.clear;
-    int? _colorPropertyID = null;
+    Material _material = null;
     string _name = "Cube (Clone)";
     Transform _parent = null;
-
+    
     public CubeBuilder WithPrefab([CanBeNull] GameObject prefab) {
         if (prefab)
             _prefab = prefab;
@@ -37,9 +36,8 @@ public class CubeBuilder
         return this;
     }
 
-    public CubeBuilder WithColor(Color color, int propertyID) {
-        _color = color;
-        _colorPropertyID = propertyID;
+    public CubeBuilder WithMaterial(Material material) {
+        _material = material;
         return this;
     }
 
@@ -60,8 +58,10 @@ public class CubeBuilder
         GameObject cube = _prefab ? Object.Instantiate(_prefab) : GameObject.CreatePrimitive(PrimitiveType.Cube);
         #endif
         
-        if (!_color.Equals(Color.clear) && _colorPropertyID.HasValue) {
-            SetColor(cube, _color, _colorPropertyID.Value);
+        if (_material) {
+            MeshRenderer meshRenderer = cube.GetComponent<MeshRenderer>();
+            if (meshRenderer)
+                meshRenderer.sharedMaterial = _material;
         }
 
         cube.transform.position = _position;
@@ -73,12 +73,5 @@ public class CubeBuilder
             cube.transform.SetParent(_parent);
 
         return cube;
-    }
-
-    void SetColor(GameObject cube, Color color, int propertyID) {
-        Renderer render = cube.GetComponent<Renderer>();
-        MaterialPropertyBlock matProperty = new();
-        matProperty.SetColor(propertyID, color);
-        render.SetPropertyBlock(matProperty);
     }
 }

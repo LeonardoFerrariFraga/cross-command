@@ -14,7 +14,7 @@ public class GridCreator : MonoBehaviour
     Vector3 _startPosition => _startPositionTransform ? _startPositionTransform.position : Vector3.zero;
     
     [SerializeField] bool _addCornerPoles;
-    [SerializeField, ShowIf("_addCornerPoles")] Color _polesColor;
+    [SerializeField, ShowIf("_addCornerPoles")] Material _polesMaterial;
     
     [Space(15)]
     
@@ -54,7 +54,7 @@ public class GridCreator : MonoBehaviour
         CreateCollider(_instantiatedPrefabs, _data, _startPosition);
         
         if (_addCornerPoles)
-            AddPoles(_instantiatedPrefabs, _data, _startPosition, _polesColor);
+            AddPoles(_instantiatedPrefabs, _data, _startPosition, _polesMaterial);
         
         CombineMeshes(_instantiatedPrefabs);
     }
@@ -87,8 +87,14 @@ public class GridCreator : MonoBehaviour
 #endif
         }
 
+        if (!_boxCollider)
+            _boxCollider = GetComponent<BoxCollider>();
+        
         _boxCollider.center = transform.position;
         _boxCollider.size = Vector3.one;
+
+        if (!_meshFilter)
+            _meshFilter = GetComponent<MeshFilter>();
         
         Mesh mesh = _meshFilter.sharedMesh;
 #if UNITY_EDITOR
@@ -96,6 +102,9 @@ public class GridCreator : MonoBehaviour
 #else
         Destroy(mesh);
 #endif
+
+        if (!_meshRenderer)
+            _meshRenderer = GetComponent<MeshRenderer>();
         
         _meshRenderer.sharedMaterial = null;
     }
@@ -131,11 +140,7 @@ public class GridCreator : MonoBehaviour
         };
         
         _meshFilter.sharedMesh.CombineMeshes(meshesToCombine);
-
-        _meshRenderer.sharedMaterial = cubes[0].GetComponent<MeshRenderer>().sharedMaterial;
-        MaterialPropertyBlock matPropertyBlock = new ();
-        matPropertyBlock.SetColor(ColorPropertyID, _data.Color);
-        _meshRenderer.SetPropertyBlock(matPropertyBlock);
+        _meshRenderer.sharedMaterial = _data.Material;
 
         foreach (GameObject cube in cubes) {
             #if UNITY_EDITOR
@@ -146,7 +151,7 @@ public class GridCreator : MonoBehaviour
         }
     }
     
-    void AddPoles(List<GameObject> cubes, GridData data, Vector3 startPosition, Color color) {
+    void AddPoles(List<GameObject> cubes, GridData data, Vector3 startPosition, Material material) {
         _poles = new GameObject("Edge Poles");;
         _poles.transform.SetParent(transform);
         _poles.transform.SetSiblingIndex(_startPositionTransform ? 1 : 0);
@@ -172,7 +177,7 @@ public class GridCreator : MonoBehaviour
                 .WithPosition(positions[i])
                 .WithName(names[i])
                 .WithScale(new Vector3(0.1f * data.Scale, data.Scale * 2f, 0.1f * data.Scale))
-                .WithColor(color, ColorPropertyID)
+                .WithMaterial(material)
                 .Build().transform.SetParent(_poles.transform);    
         }
     }
