@@ -8,5 +8,5 @@ public struct MinMaxFloat
 
     public MinMaxFloat(float min, float max) => (this.min, this.max) = (min, max);
     
-    public float RandomInBetween() => UnityEngine.Random.Range(min, max);
+    public float RandomInBetween() => Random.Range(min, max);
 }
