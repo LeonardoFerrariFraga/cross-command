@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -19,18 +20,20 @@ public class DisplayUnitCommandOptions : MonoBehaviour
 
     void Update() {
         if (Input.GetMouseButtonDown(0)) {
-            OnMouseClick(Input.mousePosition);
+            StartCoroutine(OnMouseClick(Input.mousePosition));
         }
         else if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1)) {
             _current = null;
+            CameraController.Instance.EnableDefault();
+            
             foreach (CommandButtonChooser button in _buttons) {
                 button.Clear(true);
             }
         }
     }
     
-    void OnMouseClick(Vector3 mousePosition) {
-        if (!Physics.Raycast(_camera.ScreenPointToRay(mousePosition), out RaycastHit hitInfo, 1000f, _unitLayer)) return;
+    IEnumerator OnMouseClick(Vector3 mousePosition) {
+        if (!Physics.Raycast(_camera.ScreenPointToRay(mousePosition), out RaycastHit hitInfo, 1000f, _unitLayer)) yield break;
 
         if (hitInfo.transform != _current) {
             _current = hitInfo.transform;
@@ -41,9 +44,12 @@ public class DisplayUnitCommandOptions : MonoBehaviour
         
         UnitCommandContainer container = hitInfo.transform.GetComponent<UnitCommandContainer>();
         if (!container)
-            return;
+            yield break;
 
         UnitCommandInvoker commandInvoker = container.gameObject.GetComponent<UnitCommandInvoker>();
+
+        CameraController.Instance.ZoomOnUnit(container.transform);
+        yield return new WaitForSeconds(CameraController.Instance.BlendDuration);
         
         for (int i = 0; i < container.Commands.Length; i++) {
             int currentIndex = i;
