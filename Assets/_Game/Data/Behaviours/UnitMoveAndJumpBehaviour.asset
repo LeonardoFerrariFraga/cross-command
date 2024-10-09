@@ -12,3 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1594fe5821584d49a8f7e9be5bd5cb8f, type: 3}
   m_Name: UnitMoveAndJumpBehaviour
   m_EditorClassIdentifier: 
+  _data: {fileID: 11400000, guid: a2c0677cedd8b9340a8ed556d2803ad8, type: 2}
