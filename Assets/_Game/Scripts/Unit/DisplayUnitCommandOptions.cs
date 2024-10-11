@@ -24,7 +24,7 @@ public class DisplayUnitCommandOptions : MonoBehaviour
         }
         else if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1)) {
             _current = null;
-            CameraController.Instance.EnableDefault();
+            CameraManager.Instance.EnableDefault();
             
             foreach (CommandButtonChooser button in _buttons) {
                 button.Clear(true);
@@ -48,8 +48,8 @@ public class DisplayUnitCommandOptions : MonoBehaviour
 
         UnitCommandInvoker commandInvoker = container.gameObject.GetComponent<UnitCommandInvoker>();
 
-        CameraController.Instance.ZoomOnUnit(container.transform);
-        yield return new WaitForSeconds(CameraController.Instance.BlendDuration);
+        CameraManager.Instance.ZoomOnUnit(container.transform);
+        yield return new WaitForSeconds(CameraManager.Instance.BlendDuration);
         
         for (int i = 0; i < container.Commands.Length; i++) {
             int currentIndex = i;
