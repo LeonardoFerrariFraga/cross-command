@@ -6,6 +6,8 @@ public abstract class CameraMovement
     float speed;
 
     protected Vector3 playerInput;
+    public bool HasInput => playerInput != Vector3.zero || dragging;
+    protected bool dragging;
     
     protected CameraMovement(Transform transform, float speed) {
         this.transform = transform;

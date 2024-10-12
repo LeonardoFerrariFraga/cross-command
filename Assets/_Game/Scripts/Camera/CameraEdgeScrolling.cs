@@ -13,15 +13,17 @@ public class CameraEdgeScrolling : CameraMovement
     
     public override void MoveCamera() {
         Vector3 mousePos = _camera.ScreenToViewportPoint(playerInput);
+
+        if (!AtEdge(mousePos.x) && !AtEdge(mousePos.y))
+            return;
+
+        mousePos.x = Mathf.Lerp(-1f, 1f, mousePos.x);
+        mousePos.z = Mathf.Lerp(-1f, 1f, mousePos.y);
         
-        Vector3 movementInput = Vector3.zero;
-        if (mousePos.x < EDGE_SIZE) movementInput.x = -1f;
-        else if (mousePos.x > 1f - EDGE_SIZE) movementInput.x = 1f;
-        
-        if (mousePos.y < EDGE_SIZE) movementInput.z = -1f;
-        else if (mousePos.y > 1f - EDGE_SIZE) movementInput.z = 1f;
-            
-        if (movementInput != Vector3.zero)
-            ApplyMovement(movementInput);
+        ApplyMovement(mousePos);
+    }
+
+    bool AtEdge(float axisValue) {
+        return axisValue is <= EDGE_SIZE or >= 1f - EDGE_SIZE;
     }
 }
