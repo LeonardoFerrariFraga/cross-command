@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -33,7 +32,7 @@ public class DisplayUnitCommandOptions : MonoBehaviour
     }
     
     IEnumerator OnMouseClick(Vector3 mousePosition) {
-        if (!Physics.Raycast(_camera.ScreenPointToRay(mousePosition), out RaycastHit hitInfo, 1000f, _unitLayer)) yield break;
+        if (!Physics.Raycast(_camera.ScreenPointToRay(mousePosition), out RaycastHit hitInfo, 10000f, _unitLayer)) yield break;
 
         if (hitInfo.transform != _current) {
             _current = hitInfo.transform;
@@ -42,30 +41,34 @@ public class DisplayUnitCommandOptions : MonoBehaviour
                 button.Clear(true);
         }
         
-        UnitCommandContainer container = hitInfo.transform.GetComponent<UnitCommandContainer>();
-        if (!container)
+        UnitEntity entity = hitInfo.transform.GetComponent<UnitEntity>();
+        if (entity == null)
             yield break;
-
-        UnitCommandInvoker commandInvoker = container.gameObject.GetComponent<UnitCommandInvoker>();
-
-        CameraManager.Instance.ZoomOnUnit(container.transform);
+        
+        CameraManager.Instance.ZoomOnUnit(hitInfo.transform);
         yield return new WaitForSeconds(CameraManager.Instance.BlendDuration);
         
-        for (int i = 0; i < container.Commands.Length; i++) {
+        for (int i = 0; i < entity.Container.Commands.Length; i++) {
             int currentIndex = i;
 
-            CommandButtonChooser button;
-            if (i < _buttons.Count) {
-                button = _buttons[i];
-            }
-            else {
-                button = Instantiate(_buttonPrefab, _buttonHolder).GetComponent<CommandButtonChooser>();
-                _buttons.Add(button);
-            }
-            
-            Func<ICommand> createCommand = container.Commands[currentIndex].command;
-            string label = container.Commands[currentIndex].name;
-            button.InitializeButton(() => commandInvoker.Schedule(createCommand()), label);
+            CommandButtonChooser button = GetOrInstantiate(i);
+            ScriptableObjectCommand soCommand = entity.Container.Commands[currentIndex];
+            button.InitializeButton(() => ScheduleCommandAndMovePathDrawer(entity, soCommand), soCommand.Label);
         }
+    }
+
+    void ScheduleCommandAndMovePathDrawer(UnitEntity entity, ScriptableObjectCommand soCommand) {
+        entity.Scheduler.Schedule(soCommand.CreateCommand(entity));
+        entity.PathDrawer.DrawCommand(soCommand.CreateCommand(entity.PathDrawer.PathEntity));
+    }
+    
+    CommandButtonChooser GetOrInstantiate(int index) {
+        if (index < _buttons.Count) {
+            return _buttons[index];
+        }
+        
+        CommandButtonChooser button = Instantiate(_buttonPrefab, _buttonHolder).GetComponent<CommandButtonChooser>();
+        _buttons.Add(button);
+        return button;
     }
 }

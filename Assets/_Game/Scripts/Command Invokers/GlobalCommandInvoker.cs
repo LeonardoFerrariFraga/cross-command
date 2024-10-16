@@ -5,7 +5,7 @@ public class GlobalCommandInvoker : MonoBehaviour
 {
     static GlobalCommandInvoker Instance;
     
-    CommandInvoker[] _invokers;
+    UnitEntity[] _unitEntities;
     bool _isExecuting;
 
     void Awake() {
@@ -14,24 +14,24 @@ public class GlobalCommandInvoker : MonoBehaviour
         else if (Instance != this)
             Destroy(gameObject);
         
-        _invokers = FindObjectsByType<CommandInvoker>(FindObjectsSortMode.None);
+        _unitEntities = FindObjectsByType<UnitEntity>(FindObjectsSortMode.None);
     }
 
     void Update() {
         if (_isExecuting) return;
         
-        if (Input.GetKeyDown(KeyCode.Alpha0)) {
+        if (Input.GetKeyDown(KeyCode.Space)) {
             ExecuteAll();
         }
     }
     
     async void ExecuteAll() {
-        if (_invokers is not { Length: > 0 }) return;
+        if (_unitEntities is not { Length: > 0 }) return;
         
         _isExecuting = true;
-        Task[] commandTasks = new Task[_invokers.Length];
+        Task[] commandTasks = new Task[_unitEntities.Length];
         for (int i = 0; i < commandTasks.Length; i++) {
-            commandTasks[i] = _invokers[i].ExecuteAll();
+            commandTasks[i] = _unitEntities[i].Invoker.ExecuteAllAsync(_unitEntities[i].Scheduler);
         }
 
         await Task.WhenAll(commandTasks);

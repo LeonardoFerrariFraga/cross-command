@@ -3,24 +3,19 @@ using System.Threading.Tasks;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class Unit_01 : MonoBehaviour, IUnitEntity
+public class Unit_01 : UnitEntity
 {
+    [SerializeField] Transform _visuals;
+    [Space(15)]
     [SerializeField, InlineEditor] UnitAnimatedMoveBehaviour _moveBehaviour;
-    
-    public async Task Move(Vector3 direction) {
+
+    protected override void Awake() {
+        base.Awake();
+        PathDrawer.Initialize(Invoker);
+    }
+
+    public override async Task Move(Vector3 direction) {
         CancellationToken cancellationToken = new();
-        await _moveBehaviour.AnimatedMove(transform, direction, cancellationToken);
-    }
-
-    public Task GatherResource(float searchSize) {
-        throw new System.NotImplementedException();
-    }
-
-    public Task Wait(float duration) {
-        throw new System.NotImplementedException();
-    }
-
-    public Task DeliverResource(float searchSize) {
-        throw new System.NotImplementedException();
+        await _moveBehaviour.AnimatedMove(transform, _visuals, direction, cancellationToken);
     }
 }

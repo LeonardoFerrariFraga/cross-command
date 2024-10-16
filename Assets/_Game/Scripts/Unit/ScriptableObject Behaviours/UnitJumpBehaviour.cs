@@ -26,6 +26,10 @@ public class UnitJumpBehaviour : ScriptableObject
             await Awaitable.NextFrameAsync(cancellationToken);
         }
 
+        Vector3 pos = transform.position;
+        pos.y = startY;
+        transform.position = pos;
+        
         transform.localScale = startScale;
     }
 

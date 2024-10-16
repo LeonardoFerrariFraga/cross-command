@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-[CreateAssetMenu(fileName = "MoveObjectData", menuName = "Commands/Data/Move Object")]
+[CreateAssetMenu(fileName = "MoveObjectData", menuName = "Behaviour/Data/Move Object")]
 public class MoveObjectData : ScriptableObject
 {
     [field: SerializeField] public float Duration { get; private set; } = 0.25f;

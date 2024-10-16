@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-[System.Serializable]
+[Serializable]
 public struct MinMaxFloat
 {
     [field: SerializeField] public float min { get; private set; }
